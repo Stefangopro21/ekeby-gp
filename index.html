@@ -208,6 +208,13 @@ details.help .keys{margin-top:8px}
   </div>
 </div>
 
+<div class="overlay" id="jail" hidden>
+  <div class="panel">
+    <h2>Fängelse!</h2>
+    <p>Du körde på 3 katter. Polisen tog ditt körkort och körde dig till fängelset med blåljus och siren.</p>
+    <button class="btn" id="jailBtn">Försök igen</button>
+  </div>
+</div>
 <div class="overlay" id="finish" hidden>
   <div class="panel">
     <h2>I mål!</h2>
@@ -233,6 +240,8 @@ const TRACKS = { almby: { name: 'Almbyslingan', chips: ['Tallsoppsvägen', 'Drö
 let TRACK = 'almby';
 try { const h = (location.hash.match(/bana=(\w+)/) || [])[1], l = localStorage.getItem('ekeby-gp-track'); TRACK = TRACKS[h] ? h : TRACKS[l] ? l : 'almby'; } catch (e) {}
 const FARM = TRACK === 'gard', TOMTE = TRACK === 'tomte', KVART = TRACK === 'kvarter';
+// Tallsoppsrundan uses the same look as the farm track (Stefan's choice); true brings back the cartoon kart-racer style
+const KV_TOON = false;
 // Tallsoppsrundan is traced from the aerial photo: aerial pixel -> world units
 const KV_S = 0.72, KV_PX = [[228,400],[226,330],[228,262],[238,218],[268,196],[340,180],[410,167],[456,158],[478,195],[496,262],[512,330],[528,400],[545,468],[543,503],[500,514],[420,520],[330,526],[272,519],[240,492]];
 // how far off the road you can drive before an invisible wall stops you (stays in front of the houses in Almby)
@@ -286,13 +295,13 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 $('game').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-const SKY = TOMTE ? 0x0d1733 : KVART ? 0xa8dcff : 0xc9d0d6;
+const SKY = TOMTE ? 0x0d1733 : KV_TOON ? 0xa8dcff : 0xc9d0d6;
 scene.background = new THREE.Color(SKY);
-scene.fog = new THREE.Fog(SKY, TOMTE ? 80 : KVART ? 220 : 110, TOMTE ? 460 : KVART ? 760 : 520);
+scene.fog = new THREE.Fog(SKY, TOMTE ? 80 : KV_TOON ? 220 : 110, TOMTE ? 460 : KV_TOON ? 760 : 520);
 const camera = new THREE.PerspectiveCamera(68, 1, 0.1, 1500);
 
-scene.add(TOMTE ? new THREE.HemisphereLight(0x6f84c4, 0x2a3048, 0.62) : KVART ? new THREE.HemisphereLight(0xdff2ff, 0x7aa860, 0.85) : new THREE.HemisphereLight(0xe8eef3, 0x5b6b4a, 0.9));
-const sun = TOMTE ? new THREE.DirectionalLight(0xa9bdf0, 0.38) : KVART ? new THREE.DirectionalLight(0xfff1d6, 0.75) : new THREE.DirectionalLight(0xf4f1ea, 0.5);
+scene.add(TOMTE ? new THREE.HemisphereLight(0x6f84c4, 0x2a3048, 0.62) : KV_TOON ? new THREE.HemisphereLight(0xdff2ff, 0x7aa860, 0.85) : new THREE.HemisphereLight(0xe8eef3, 0x5b6b4a, 0.9));
+const sun = TOMTE ? new THREE.DirectionalLight(0xa9bdf0, 0.38) : KV_TOON ? new THREE.DirectionalLight(0xfff1d6, 0.75) : new THREE.DirectionalLight(0xf4f1ea, 0.5);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024); sun.shadow.radius = 4;
 Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 1, far: 150 });
@@ -346,7 +355,7 @@ function canvasTex(w, h, draw) {
   const t = new THREE.CanvasTexture(cv); t.anisotropy = 4; return t;
 }
 
-const asphaltTex = KVART && (() => { const t = canvasTex(256, 256, (g, w, h) => {
+const asphaltTex = KV_TOON && (() => { const t = canvasTex(256, 256, (g, w, h) => {
   g.fillStyle = '#e4e4e4'; g.fillRect(0, 0, w, h);
   for (let i = 0; i < 9000; i++) { const l = 170 + Math.floor(Math.random() * 85); g.fillStyle = `rgb(${l},${l},${l})`; g.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 1 + Math.random() * 2); }
   for (let i = 0; i < 2; i++) { g.strokeStyle = 'rgba(70,70,70,.16)'; g.lineWidth = 1; g.beginPath(); let x = Math.random() * w, y = Math.random() * h; g.moveTo(x, y); for (let k = 0; k < 8; k++) { x += (Math.random() - 0.5) * 40; y += Math.random() * 30; g.lineTo(x, y); } g.stroke(); }
@@ -381,16 +390,16 @@ if (FARM) {
   ribbon(-W / 2 - 1.6, -W / 2, 0.03, i => (i % 5 < 2 ? 0x7d9a4c : 0x6f8d42));
 } else {
 ribbon(-W / 2, W / 2, 0.02, i => (i % 37 < 3 ? 0x5a5d61 : i % 90 < 45 ? 0x6b6e72 : 0x676a6e));
-ribbon(-0.12, 0.12, 0.025, i => (KVART ? (i % 6 < 3 ? 0xffffff : 0x676a6e) : i % 53 < 26 ? 0x55585c : 0x676a6e));
-ribbon(W / 2, W / 2 + 1.6, 0.03, i => KVART ? (i % 4 < 2 ? 0xe8322b : 0xffffff) : (TOMTE ? (i % 7 < 3 ? 0xeef3f8 : 0xdde5ee) : i % 7 < 3 ? 0xa39b8e : 0x948d82));
-ribbon(-W / 2 - 1.6, -W / 2, 0.03, i => KVART ? (i % 4 < 2 ? 0xe8322b : 0xffffff) : (TOMTE ? (i % 7 < 3 ? 0xeef3f8 : 0xdde5ee) : i % 7 < 3 ? 0xa39b8e : 0x948d82));
+ribbon(-0.12, 0.12, 0.025, i => (KV_TOON ? (i % 6 < 3 ? 0xffffff : 0x676a6e) : i % 53 < 26 ? 0x55585c : 0x676a6e));
+ribbon(W / 2, W / 2 + 1.6, 0.03, i => KV_TOON ? (i % 4 < 2 ? 0xe8322b : 0xffffff) : (TOMTE ? (i % 7 < 3 ? 0xeef3f8 : 0xdde5ee) : i % 7 < 3 ? 0xa39b8e : 0x948d82));
+ribbon(-W / 2 - 1.6, -W / 2, 0.03, i => KV_TOON ? (i % 4 < 2 ? 0xe8322b : 0xffffff) : (TOMTE ? (i % 7 < 3 ? 0xeef3f8 : 0xdde5ee) : i % 7 < 3 ? 0xa39b8e : 0x948d82));
 if (TOMTE) { ribbon(W / 2 - 0.9, W / 2, 0.028, i => (i % 11 < 6 ? 0xcfd8e2 : 0xb9c3cf)); ribbon(-W / 2, -W / 2 + 0.9, 0.028, i => (i % 11 < 6 ? 0xcfd8e2 : 0xb9c3cf)); }
 }
 
 // lawn
 const grassTex = canvasTex(128, 128, (g, w, h) => {
-  g.fillStyle = TOMTE ? '#e6ecf3' : KVART ? '#52b334' : '#6b9a4a'; g.fillRect(0, 0, w, h);
-  for (let i = 0; i < 900; i++) { g.fillStyle = TOMTE ? (rnd() < .5 ? '#f6f9fc' : '#d2dbe6') : KVART ? (rnd() < .5 ? '#60c240' : '#47a12c') : rnd() < .5 ? '#77a855' : '#5f8c41'; g.fillRect(rnd() * w, rnd() * h, 2, 2); }
+  g.fillStyle = TOMTE ? '#e6ecf3' : KV_TOON ? '#52b334' : '#6b9a4a'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 900; i++) { g.fillStyle = TOMTE ? (rnd() < .5 ? '#f6f9fc' : '#d2dbe6') : KV_TOON ? (rnd() < .5 ? '#60c240' : '#47a12c') : rnd() < .5 ? '#77a855' : '#5f8c41'; g.fillRect(rnd() * w, rnd() * h, 2, 2); }
 });
 grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping; grassTex.repeat.set(160, 160);
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), new THREE.MeshLambertMaterial({ map: grassTex }));
@@ -430,7 +439,7 @@ const nightTex = TOMTE && canvasTex(2048, 1024, (g, w, h) => {
   g.fillStyle = '#fffbe9'; g.beginPath(); g.arc(mx, my, 26, 0, 7); g.fill();
 });
 // Tallsoppsrundan: sunny cartoon sky with big puffy clouds
-const toonSkyTex = KVART && canvasTex(2048, 1024, (g, w, h) => {
+const toonSkyTex = KV_TOON && canvasTex(2048, 1024, (g, w, h) => {
   const gr = g.createLinearGradient(0, 0, 0, h / 2); gr.addColorStop(0, '#2f8fe6'); gr.addColorStop(1, '#bfe6ff');
   g.fillStyle = gr; g.fillRect(0, 0, w, h / 2); g.fillStyle = '#bfe6ff'; g.fillRect(0, h / 2, w, h / 2);
   for (let c = 0; c < 22; c++) {
@@ -443,7 +452,7 @@ const toonSkyTex = KVART && canvasTex(2048, 1024, (g, w, h) => {
     }
   }
 });
-const sky = new THREE.Mesh(new THREE.SphereGeometry(900, 32, 16), new THREE.MeshBasicMaterial({ map: TOMTE ? nightTex : KVART ? toonSkyTex : skyTex, side: THREE.BackSide, fog: false }));
+const sky = new THREE.Mesh(new THREE.SphereGeometry(900, 32, 16), new THREE.MeshBasicMaterial({ map: TOMTE ? nightTex : KV_TOON ? toonSkyTex : skyTex, side: THREE.BackSide, fog: false }));
 scene.add(sky);
 
 // ---------- houses (styles taken from the street photos) ----------
@@ -751,9 +760,9 @@ const paverTex = (() => { const t = canvasTex(256, 256, (g, w, h) => { g.fillSty
   for (let y = 0; y < h; y += 32) for (let x = (y / 32) % 2 ? -32 : 0; x < w; x += 64) { const l = 128 + Math.floor(Math.random() * 22); g.fillStyle = `rgb(${l},${l - 2},${l - 6})`; g.fillRect(x + 2, y + 2, 60, 28); }
 }); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
 function buildKvarter() {
-  for (const k in STY) STY[k].tex = facadeHQ({ wall: STY[k].wall, trim: STY[k].trim, door: STY[k].gable });
-  STY.red.roofTex = tileTex('#a8432c', '#7c2c1b'); STY.red.paving = true;
-  STY.black.roofTex = STY.whiteRow.roofTex = STY.terrace.roofTex = tileTex('#2c2d30', '#1c1d1f');
+  if (KV_TOON) for (const k in STY) STY[k].tex = facadeHQ({ wall: STY[k].wall, trim: STY[k].trim, door: STY[k].gable });
+  if (KV_TOON) STY.red.roofTex = tileTex('#a8432c', '#7c2c1b'); STY.red.paving = KV_TOON;
+  if (KV_TOON) STY.black.roofTex = STY.whiteRow.roofTex = STY.terrace.roofTex = tileTex('#2c2d30', '#1c1d1f');
   const KP = (px, py) => [(px - 228) * KV_S, (py - 400) * KV_S];
   const keep = (x, z, r) => houses.push({ x, z, r, L: r, g: 0 });
   const flat = (x, z, w, d, c, y = 0.012, rot = 0) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), lam(c)); m.rotation.set(-Math.PI / 2, 0, rot); m.position.set(x, y, z); m.receiveShadow = true; scene.add(m); return m; };
@@ -806,7 +815,7 @@ function buildKvarter() {
     for (let k = 0; k < n; k++) if (rnd() < 0.7) { const c = car(CAR_COLORS[Math.floor(rnd() * CAR_COLORS.length)]); c.rotation.y = Math.PI / 2; c.position.set(-L / 2 + 2.6 + bay * (k + 0.5), 0, 0.4); g.add(c); }
     keep(x, z, L / 2 + 2);
   }
-  const parkedCar = (px, py, rot) => { const c = car(CAR_COLORS[Math.floor(rnd() * CAR_COLORS.length)]); const [x, z] = KP(px, py); c.position.set(x, 0, z); c.rotation.y = rot; scene.add(c); };
+  const parkedCar = (px, py, rot) => { const c = car(CAR_COLORS[Math.floor(rnd() * CAR_COLORS.length)]); const [x, z] = KP(px, py); if (minDistToTrack(x, z) < W / 2 + 5) return; /* never parked on the race road */ c.position.set(x, 0, z); c.rotation.y = rot; scene.add(c); };
 
   // --- side streets leaving the loop (not part of the lap) ---
   strip([[458, 156], [440, 70], [425, 0], [410, -140]], 10);           // Dröjabacken north
@@ -864,6 +873,7 @@ function buildKvarter() {
     for (let k = 0; k < 6; k++) box(g, 0.48, 0.5, 0.42, 0x18191b, -1.5 + k * 0.6, 1.3, 0);
   }
   // festive race dressing: striped flag poles along the road and hot-air balloons over the block
+  if (KV_TOON) {
   const FLAGC = [0xe8322b, 0xffd21f, 0x2b7de9, 0x3cc43c, 0xff7ad9, 0xff8a1f];
   for (let i = 6, k = 0; i < N; i += Math.round(26 / ds), k++) for (const side of [-1, 1]) {
     const p = pts[i], n = nor[i], t = tan[i], off = W / 2 + 2.6, x = p.x + n.x * side * off, z = p.z + n.z * side * off;
@@ -880,6 +890,7 @@ function buildKvarter() {
     for (let s = 0; s < 8; s++) { const seg = new THREE.Mesh(new THREE.SphereGeometry(9, 16, 12, s * Math.PI / 4, Math.PI / 4), lam(s % 2 ? c1 : c2)); seg.scale.y = 1.15; g.add(seg); }
     box(g, 2.4, 1.6, 2.4, 0x9b6b3a, 0, -13.5, 0);
     for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) box(g, 0.08, 4.2, 0.08, 0x6b4a2a, a * 1.1, -11, b * 1.1, false);
+  }
   }
   streetSign(near(490, 230), -1, 'Dröjabacken'); streetSign(near(229, 380), -1, 'Tallsoppsvägen'); streetSign(near(380, 520), 1, 'Tallsoppsvägen');
 }
@@ -952,7 +963,7 @@ if (KVART) { // columnar thuja like the photos: tapered body, rounded top, two g
   instanced(new THREE.SphereGeometry(0.5, 8, 6), new THREE.MeshLambertMaterial({ color: 0x4a7a32, flatShading: true }), thuja.map(o => ({ ...o, y: o.y + 1.4 * o.s })), false);
 } else instanced(new THREE.ConeGeometry(0.85, 3.4, 7), lam(0x3f6b2c), thuja);
 instanced(new THREE.BoxGeometry(1.3, 1.3, 2.15), lam(TOMTE ? 0x9fb3a4 : 0x56803a), boxH);
-if (KVART) {
+if (KV_TOON) {
   const pk = canvasTex(256, 128, (g, w, h) => { g.clearRect(0, 0, w, h); g.fillStyle = '#f4f2ec';
     for (let x = 4; x < w; x += 21) { g.beginPath(); g.moveTo(x, 18); g.lineTo(x + 6.5, 4); g.lineTo(x + 13, 18); g.lineTo(x + 13, h); g.lineTo(x, h); g.fill(); }
     g.fillStyle = 'rgba(0,0,0,.12)'; for (let x = 4; x < w; x += 21) g.fillRect(x + 10, 18, 3, h); });
@@ -1853,7 +1864,7 @@ function resetRace() {
   const start = N - 10;
   placeAt(start);
   S.progress = -10; S.laps = 0; S.time = 0; S.lapStart = 0; S.lapTimes = [];
-  clearSkids(); policeOff(); POL.k = 0; oppsOff();
+  clearSkids(); policeOff(); POL.k = 0; oppsOff(); S.catKills = 0; if (ARR) ARR.reset();
   if (driver && driver.parent !== kart) kart.add(driver);
   if (driver) seatDriver();
   S.foot = 'in'; S.waveT = 0; basePose = POSE.seat;
@@ -2360,6 +2371,42 @@ const ADS_IMG = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAkGBwgH
   instanced(new THREE.BoxGeometry(0.28, H0 + SIZE * 0.8, 0.28), lam(0x6b6f72), posts);
 })();
 // ---------- farm life: animals, kids, potato pickers and tractors (farm track only) ----------
+// ---------- Tallsoppsrundan: picnic benches on the grass wedge by the start, and a kid riding a kick scooter back and forth ----------
+const kvLife = !KVART ? { update() {} } : (() => {
+  const wood = lam(0x9a6a3a), dark = lam(0x5b3a1d), mk = (geo, m, x, y, z, p) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; p.add(o); return o; };
+  const BX = -9.4;
+  for (const z of [62, 72, 82]) { // bench - table - bench, three sets in one long row
+    const g = new THREE.Group(); g.position.set(BX, 0, z); scene.add(g);
+    mk(new THREE.BoxGeometry(0.9, 0.08, 2.0), wood, 0, 0.76, 0, g);
+    for (const s of [-1, 1]) {
+      mk(new THREE.BoxGeometry(0.32, 0.07, 2.0), wood, s * 0.8, 0.45, 0, g);
+      for (const e of [-0.8, 0.8]) { mk(new THREE.BoxGeometry(0.08, 0.42, 0.08), dark, s * 0.8, 0.21, e, g); mk(new THREE.BoxGeometry(0.08, 0.74, 0.08), dark, s * 0.3, 0.37, e, g); }
+    }
+    for (const e of [-0.8, 0.8]) mk(new THREE.BoxGeometry(1.9, 0.07, 0.08), dark, 0, 0.3, e, g);
+  }
+  // kid on a kick scooter
+  const rider = new THREE.Group(); scene.add(rider);
+  const sc = new THREE.Group(); rider.add(sc);
+  const red = lam(0xd8322b), grey = lam(0x9aa1a8), blk = lam(0x1d1e22);
+  mk(new THREE.BoxGeometry(0.2, 0.05, 0.85), red, 0, 0.13, 0, sc);
+  for (const z of [-0.42, 0.42]) { const w = mk(new THREE.CylinderGeometry(0.1, 0.1, 0.06, 16), blk, 0, 0.1, z, sc); w.rotation.z = Math.PI / 2; }
+  const stem = mk(new THREE.CylinderGeometry(0.025, 0.025, 0.85, 8), grey, 0, 0.55, 0.43, sc); stem.rotation.x = -0.12;
+  const bar = mk(new THREE.CylinderGeometry(0.022, 0.022, 0.45, 8), grey, 0, 0.97, 0.38, sc); bar.rotation.z = Math.PI / 2;
+  const kid = makeDriver({ name: '', skin: 0xf0c4a4, hair: 0x8a5a32, hairStyle: 'bob', sweater: 0x2f9ad8, pants: 0x34405a, boots: 0xf2f2f2, laces: 0x2f9ad8, stripe: null, cap: 0xf2c230 });
+  kid.children.filter(o => o.isSprite).forEach(o => kid.remove(o)); kid.scale.setScalar(0.6); kid.position.set(0, 0.16, -0.05); rider.add(kid);
+  const Z0 = 56, Z1 = 79, RX = -6.9;
+  let z = Z0, dir = 1, turn = 0, t = 0, h = 0;
+  return { update(dt) {
+    t += dt;
+    if (turn > 0) { turn -= dt; h += dt * Math.PI / 1.0; if (turn <= 0) { dir = -dir; h = dir > 0 ? 0 : Math.PI; } }
+    else { z += dir * 3.2 * dt; if ((dir > 0 && z >= Z1) || (dir < 0 && z <= Z0)) { z = Math.max(Z0, Math.min(Z1, z)); turn = 1.0; } }
+    // a small half-circle at each end, then back again
+    const ox = turn > 0 ? Math.sin(Math.max(0, 1 - turn) * Math.PI) * 1.2 * dir : 0;
+    rider.position.set(RX + ox, 0, z); rider.rotation.y = h;
+    const kick = turn > 0 ? 0 : Math.max(0, Math.sin(t * 3.4));
+    setPose(kid, { hip: [0.15, -0.25 + kick * 0.9], knee: [0.15, 0.4 - kick * 0.3], sh: [-1.05, -1.05], shz: [0.12, -0.12] });
+  } };
+})();
 const farm = FARM ? (() => {
   const mk = (geo, m, x, y, z, parent) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; parent.add(o); return o; };
   const legPair = (g, m, xs, zs, y, len, r) => { const legs = []; for (const z of zs) for (const x of xs) { const pv = new THREE.Group(); pv.position.set(x, y, z); g.add(pv); mk(new THREE.CylinderGeometry(r, r * 0.85, len, 7), m, 0, -len / 2, 0, pv); legs.push(pv); } return legs; };
@@ -3621,7 +3668,8 @@ function squashCat(c) {
     c.stars = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false })); c.stars.scale.set(1.2, 0.6, 1); scene.add(c.stars);
   }
   c.stars.visible = true; c.stars.position.set(c.g.position.x, 0.8, c.g.position.z);
-  AMB.queue.push(c); flash('Aj! Djurambulansen är på väg');
+  AMB.queue.push(c); S.catKills = (S.catKills || 0) + 1;
+  if (S.catKills >= 3 && ARR && S.mode === 'race') ARR.start(); else flash(S.catKills === 2 ? 'Aj! Kör du på en katt till tar polisen ditt körkort!' : 'Aj! Djurambulansen är på väg');
 }
 function updateAmbulance(dt) {
   const A = AMB;
@@ -3817,6 +3865,92 @@ function updatePolice(dt) {
   POL.light.intensity = 2.2 + Math.sin(POL.t * 22) * 1.4;
   POL.g.position.set(POL.x, 0, POL.z); POL.g.rotation.y = POL.h;
 }
+
+// ---------- run over 3 cats: the police take your licence and drive you to jail ----------
+var ARR = (() => {
+  const P = makePolice(); scene.add(P.g); P.g.visible = false;
+  P.g.children.filter(o => o.geometry && o.geometry.type === 'PlaneGeometry').forEach(o => o.visible = false); // no speed sign
+  let jail = null;
+  const buildJail = i => {
+    const p = pts[i], n = nor[i], side = -1, off = W / 2 + 16, g = new THREE.Group();
+    g.position.set(p.x + n.x * side * off, 0, p.z + n.z * side * off); g.rotation.y = Math.atan2(-n.x * side, -n.z * side); scene.add(g);
+    const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+    const wall = lam(0x8f9296), dark = lam(0x2b2d31), bar = lam(0x1a1b1e);
+    add(new THREE.BoxGeometry(18, 8, 11), wall, 0, 4, 0);
+    add(new THREE.BoxGeometry(18.6, 0.6, 11.6), dark, 0, 8.3, 0);
+    for (const x of [-6, -2, 2, 6]) for (const y of [2.6, 5.8]) { add(new THREE.BoxGeometry(2, 1.4, 0.1), dark, x, y, 5.52); for (let k = -2; k <= 2; k++) add(new THREE.BoxGeometry(0.08, 1.4, 0.08), bar, x + k * 0.4, y, 5.6); }
+    add(new THREE.BoxGeometry(2.6, 3.4, 0.2), lam(0x3a3f47), 0, 1.7, 5.55);
+    const tex = canvasTex(512, 128, (c, w, h) => { c.fillStyle = '#1f2a44'; c.fillRect(0, 0, w, h); c.strokeStyle = '#f2d21b'; c.lineWidth = 8; c.strokeRect(6, 6, w - 12, h - 12); c.fillStyle = '#fff'; c.font = '900 70px Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('FÄNGELSE', w / 2, h / 2 + 4); });
+    const sg = add(new THREE.BoxGeometry(8, 2, 0.2), [dark, dark, dark, dark, new THREE.MeshLambertMaterial({ map: tex }), dark], 0, 9.8, 4.8);
+    for (let x = -12; x <= 12; x += 1.2) add(new THREE.BoxGeometry(0.08, 3, 0.08), bar, x, 1.5, -8.5);
+    add(new THREE.BoxGeometry(24, 0.1, 0.1), bar, 0, 3, -8.5);
+    return g;
+  };
+  const st = { on: false, phase: '', t: 0, idx: 0, stop: 0, x: 0, z: 0, h: 0 };
+  const cam = new THREE.Vector3(), look = new THREE.Vector3();
+  const fwdOf = h => [Math.sin(h), Math.cos(h)], leftOf = h => [Math.cos(h), -Math.sin(h)];
+  return {
+    start() {
+      if (st.on) return;
+      Object.assign(st, { on: true, phase: 'pull', t: 0 });
+      S.mode = 'arrest'; S.v = 0; S.vs = 0; $('count').hidden = true; $('skip').hidden = true;
+      $('hud').hidden = true; $('touch').hidden = true; $('resetBtn').hidden = true; $('wrong').hidden = true; $('hint').hidden = true;
+      const [fx, fz] = fwdOf(S.heading), [lx, lz] = leftOf(S.heading);
+      st.from = [S.x - fx * 45 + lx * 5, S.z - fz * 45 + lz * 5]; st.to = [S.x + fx * 9 + lx * 5, S.z + fz * 9 + lz * 5]; st.h = S.heading;
+      P.g.visible = true; sfx.siren(true);
+      flash('Du har kört på 3 katter! Polisen kommer!');
+      cam.copy(camera.position);
+    },
+    reset() {
+      st.on = false; P.g.visible = false; P.light.intensity = 0; sfx.siren(false); $('jail').hidden = true;
+      if (driver) driver.visible = true;
+    },
+    update(dt) {
+      st.t += dt;
+      const blink = Math.floor(st.t * 7) % 2; P.lamps[0].material.color.setHex(blink ? 0x3a7bff : 0x0a1a66); P.lamps[1].material.color.setHex(blink ? 0x0a1a66 : 0x3a7bff); P.light.intensity = 2.2 + Math.sin(st.t * 22) * 1.4;
+      const [fx, fz] = fwdOf(S.heading), [lx, lz] = leftOf(S.heading);
+      if (st.phase === 'pull') { // police car drives up and stops in front of the kart
+        const u = Math.min(1, st.t / 3), e = 1 - (1 - u) ** 3;
+        st.x = st.from[0] + (st.to[0] - st.from[0]) * e; st.z = st.from[1] + (st.to[1] - st.from[1]) * e;
+        cam.lerp(new THREE.Vector3(S.x - fx * 9 - lx * 6, 5, S.z - fz * 9 - lz * 6), Math.min(1, dt * 2)); look.set(S.x + fx * 3, 1, S.z + fz * 3);
+        if (u >= 1) {
+          st.phase = 'walk'; st.t = 0; flash('Polisen: Ditt körkort är indraget! Följ med till polisbilen.');
+          kart.remove(driver); scene.add(driver); driver.scale.setScalar(1); driver.rotation.set(0, 0, 0);
+          st.dx = S.x + lx * 1.6; st.dz = S.z + lz * 1.6; driver.position.set(st.dx, 0, st.dz);
+        }
+      } else if (st.phase === 'walk') { // driver walks to the police car and gets in the back
+        const tx = st.x - fx * 1.2 - lx * 1.4, tz = st.z - fz * 1.2 - lz * 1.4, dx = tx - st.dx, dz = tz - st.dz, d = Math.hypot(dx, dz);
+        if (st.t > 1.2 && d > 0.15) { const s = Math.min(d, 2.2 * dt); st.dx += dx / d * s; st.dz += dz / d * s; driver.rotation.y = Math.atan2(dx, dz); setPose(driver, walkPose(st.t)); }
+        else setPose(driver, st.t > 1.2 ? POSE.stand : { ...POSE.stand, sh: [-2.6, 0] });
+        driver.position.set(st.dx, 0, st.dz);
+        cam.lerp(new THREE.Vector3(S.x + fx * 2 - lx * 9, 4, S.z + fz * 2 - lz * 9), Math.min(1, dt * 2)); look.set((S.x + st.x) / 2, 1, (S.z + st.z) / 2);
+        if (st.t > 1.2 && d <= 0.15) {
+          driver.visible = false; st.phase = 'drive'; st.t = 0;
+          let b = 0, m = Infinity; for (let i = 0; i < N; i++) { const q = (pts[i].x - st.x) ** 2 + (pts[i].z - st.z) ** 2; if (q < m) { m = q; b = i; } }
+          st.idx = b; st.stop = (b + Math.round(320 / ds)) % N; if (jail) scene.remove(jail); jail = buildJail(st.stop);
+          flash('Iväg till fängelset med blåljus och siren!');
+        }
+      } else if (st.phase === 'drive') { // blue lights and siren along the road to the jail
+        const rem = (st.stop - st.idx + N) % N, step = Math.min(rem, 30 * dt / ds * Math.min(1, rem / 30 + 0.2));
+        st.idx = (st.idx + step) % N;
+        const i = Math.floor(st.idx), f = st.idx - i, j = (i + 1) % N, off = -3.2;
+        const px = pts[i].x + (pts[j].x - pts[i].x) * f + nor[i].x * off, pz = pts[i].z + (pts[j].z - pts[i].z) * f + nor[i].z * off;
+        const th = Math.atan2(tan[i].x, tan[i].z), dh = Math.atan2(Math.sin(th - st.h), Math.cos(th - st.h)); st.h += dh * Math.min(1, dt * 5);
+        st.x = px; st.z = pz;
+        const [cx, cz] = fwdOf(st.h);
+        cam.lerp(new THREE.Vector3(st.x - cx * 13, 6, st.z - cz * 13), Math.min(1, dt * 3)); look.set(st.x + cx * 4, 1.5, st.z + cz * 4);
+        if (rem < 0.5) { st.phase = 'jail'; st.t = 0; sfx.siren(false); }
+      } else if (st.phase === 'jail') {
+        const [cx, cz] = fwdOf(st.h), [jx, jz] = [jail.position.x, jail.position.z];
+        cam.lerp(new THREE.Vector3(st.x + cx * 14 + (st.x - jx) * 0.4, 7, st.z + cz * 14 + (st.z - jz) * 0.4), Math.min(1, dt * 1.5)); look.set((st.x + jx) / 2, 3, (st.z + jz) / 2);
+        if (st.t > 2.2 && $('jail').hidden) $('jail').hidden = false;
+      }
+      P.g.position.set(st.x, 0, st.z); P.g.rotation.y = st.h;
+      camera.position.copy(cam); camera.lookAt(look);
+    },
+  };
+})();
+$('jailBtn').addEventListener('click', () => { $('jail').hidden = true; toMenu(); });
 
 // ---------- police checkpoint (poliskontroll) at the roadside ----------
 const CHK = (() => {
@@ -4015,7 +4149,16 @@ const sfx = (() => {
   btn.addEventListener('click', e => { e.stopPropagation(); on = !on; try { localStorage.setItem('ekeby-gp-sound', on ? 'on' : 'off'); } catch (err) {} paint(); unlock(); if (master) master.gain.setTargetAtTime(on ? 0.9 : 0, ac.currentTime, 0.05); btn.blur(); });
   addEventListener('keydown', e => { if (e.code === 'KeyM' && !e.repeat) btn.click(); });
   paint();
+  let siren = null;
   return {
+    // police siren: two tones switching back and forth
+    siren(want) {
+      if (!want) { if (siren) { try { siren.o.stop(); siren.l.stop(); } catch (e) {} siren = null; } return; }
+      if (siren || !ac || ac.state !== 'running') return;
+      const o = ac.createOscillator(), l = ac.createOscillator(), lg = ac.createGain(), g = ac.createGain();
+      o.type = 'triangle'; o.frequency.value = 760; l.type = 'square'; l.frequency.value = 0.85; lg.gain.value = 150; g.gain.value = 0.16;
+      l.connect(lg).connect(o.frequency); o.connect(g).connect(master); o.start(); l.start(); siren = { o, l };
+    },
     // gunshot: a sharp noise crack plus a low thump (pistol is shorter and snappier)
     shot(kind) {
       if (!eng || ac.state !== 'running') return; const t0 = ac.currentTime, rifle = kind === 'rifle';
@@ -4581,7 +4724,7 @@ function applyView() {
   else if (want === 'top') camera.setViewOffset(innerWidth, innerHeight, 0, innerHeight * 0.3, innerWidth, innerHeight);
   else camera.clearViewOffset();
 }
-const toonify = !KVART ? null : (() => {
+const toonify = !KV_TOON ? null : (() => {
   const grad = (() => { const d = new Uint8Array([90, 90, 90, 255, 175, 175, 175, 255, 255, 255, 255, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
   const ink = new THREE.MeshBasicMaterial({ color: 0x1a1a24, side: THREE.BackSide });
   ink.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', 'vec3 transformed = position + normal * 0.06;'); };
@@ -4634,6 +4777,8 @@ function frame(now) {
     if (S.countdown <= 0) { S.mode = 'race'; c.textContent = 'KÖR!'; c.classList.add('go'); setTimeout(() => { c.hidden = true; c.classList.remove('go'); }, 700); }
     else if (Math.ceil(S.countdown) !== before || c.textContent === 'KÖR!') c.textContent = Math.min(3, Math.ceil(S.countdown));
     updateCamera(dt);
+  } else if (S.mode === 'arrest') {
+    ARR.update(dt);
   } else if (S.mode === 'race') {
     S.time += dt;
     if (S.foot === 'in') { step(dt); updateCamera(dt); }
@@ -4648,9 +4793,9 @@ function frame(now) {
   updatePolice(dt); CHK.update(dt);
   updateCats(dt);
   updateOpps(dt);
-  factory.update(dt);
+  factory.update(dt); kvLife.update(dt);
   farm.update(dt); packhouse.update(dt); if (trailer) trailer.update(dt); cheer.update(dt); harvest.update(dt); guard.update(dt); store.update(dt); tomte.update(dt);
-  if (S.mode !== 'intro') applyPose(dt);
+  if (S.mode !== 'intro' && S.mode !== 'arrest') applyPose(dt);
   applyView();
   if (flashTimer > 0 && (flashTimer -= dt) <= 0) $('lapFlash').hidden = true;
   sun.position.set(S.x + 40, 70, S.z + 25); sun.target.position.set(S.x, 0, S.z);
